@@ -78,3 +78,56 @@ func CreateRole(ctx context.Context, dbc db.Client, roleData *fs.Role) (*fs.Role
 		Set("description", roleData.Description).
 		Set("root", roleData.Root))
 }
+
+func ResetAdminPassword(ctx context.Context,
+	dbClient db.Client,
+	password string,
+	id int,
+) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("panic: %v", r)
+		}
+	}()
+
+	if password == "" {
+		return fmt.Errorf("password is required")
+	}
+
+	tx := utils.Must(dbClient.Tx(ctx))
+
+	defer func() {
+		if err != nil {
+			fmt.Println(err)
+			if err := tx.Rollback(); err != nil {
+				_ = fmt.Errorf("rollback error: %v", err)
+			}
+		}
+	}()
+
+	admin, err := db.Query[*fs.User](tx).Where(db.EQ("id", id)).First(ctx)
+	if err != nil {
+		if db.IsNotFound(err) {
+			err = nil
+		} else {
+			return err
+		}
+	}
+	if admin == nil {
+		return fmt.Errorf("cannot find admin user. Please setup the app first")
+	}
+
+	hashedPassword := utils.Must(utils.GenerateHash(password))
+
+	utils.Must(db.Update[*fs.User](ctx, tx, fs.Map{
+		"password": hashedPassword,
+	}, []*db.Predicate{db.EQ("id", id)}))
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf(err.Error())
+	}
+
+	fmt.Println("Reset admin password successfully")
+
+	return nil
+}
