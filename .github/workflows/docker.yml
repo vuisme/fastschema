@@ -24,7 +24,7 @@ jobs:
             try {
               const excludes = ['draft', 'prerelease'];
               const { data } = await github.rest.repos.listReleases({
-                owner: 'fastschema',
+                owner: 'vuisme',
                 repo: 'fastschema'
               });
   
