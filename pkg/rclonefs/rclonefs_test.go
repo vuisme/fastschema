@@ -30,17 +30,28 @@ func TestNewFromConfig(t *testing.T) {
 			Root:    "",
 			BaseURL: "https://example.com/local",
 		},
+		{
+			Driver:       "drive",
+			Name:         "drive-disk",
+			Root:         "/drive-root",
+			ClientID:     "drive-client-id",
+			ClientSecret: "drive-client-secret",
+			AccessToken:  "drive-access-token",
+			BaseURL:      "https://example.com/drive",
+		},
 	}
 
+	// Test case for missing local disk root
 	disks, err := NewFromConfig(diskConfigs, rootDir)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "root is required for local disk")
 	assert.Nil(t, disks)
 
+	// Correcting local disk root
 	diskConfigs[1].Root = "local-root"
 	disks, err = NewFromConfig(diskConfigs, rootDir)
 	assert.NoError(t, err)
-	assert.Equal(t, 2, len(disks))
+	assert.Equal(t, 3, len(disks))
 
 	// Check if the first disk is an S3 disk
 	s3Disk, ok := disks[0].(*RcloneS3)
@@ -61,4 +72,14 @@ func TestNewFromConfig(t *testing.T) {
 	assert.Equal(t, "local-disk", localDisk.Name())
 	assert.Equal(t, path.Join(rootDir, "local-root"), localDisk.Root())
 	assert.Equal(t, "https://example.com/local", localDisk.config.BaseURL)
+
+	// Check if the third disk is a Google Drive disk
+	driveDisk, ok := disks[2].(*RcloneDrive)
+	assert.True(t, ok)
+	assert.Equal(t, "drive-disk", driveDisk.Name())
+	assert.Equal(t, "/drive-root", driveDisk.Root())
+	assert.Equal(t, "drive-client-id", driveDisk.config.ClientID)
+	assert.Equal(t, "drive-client-secret", driveDisk.config.ClientSecret)
+	assert.Equal(t, "drive-access-token", driveDisk.config.AccessToken)
+	assert.Equal(t, "https://example.com/drive", driveDisk.config.BaseURL)
 }
