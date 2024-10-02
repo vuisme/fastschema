@@ -56,6 +56,22 @@ func NewFromConfig(diskConfigs []*fs.DiskConfig, localRoot string) ([]fs.Disk, e
 			}
 
 			disks = append(disks, localDisk)
+			
+		case "drive":  // Thêm hỗ trợ cho Google Drive
+			driveDisk, err := NewDrive(&RcloneDriveConfig{
+				Name:         diskConfig.Name,
+				Root:         diskConfig.Root,
+				ClientID:     diskConfig.ClientID,
+				ClientSecret: diskConfig.ClientSecret,
+				AccessToken:  diskConfig.AccessToken,
+				BaseURL:      diskConfig.BaseURL,
+			})
+
+			if err != nil {
+				return nil, err
+			}
+
+			disks = append(disks, driveDisk)
 		}
 	}
 
